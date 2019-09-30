@@ -43,12 +43,6 @@ describe('Integration', () => {
       }
     });
 
-    it('NODE_PATH', async () => {
-      doc = await initDOM('node-path');
-
-      expect(doc.getElementById('feature-node-path').childElementCount).toBe(4);
-    });
-
     it('PUBLIC_URL', async () => {
       doc = await initDOM('public-url');
 
@@ -60,7 +54,7 @@ describe('Integration', () => {
         `${prefix}.`
       );
       expect(
-        doc.querySelector('head link[rel="shortcut icon"]').getAttribute('href')
+        doc.querySelector('head link[rel="icon"]').getAttribute('href')
       ).toBe(`${prefix}/favicon.ico`);
     });
 
