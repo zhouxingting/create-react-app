@@ -52,6 +52,8 @@ const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/;
+const lessRegex = /\.less$/;           // @newrank
+const lessModuleRegex = /\.module\.less$/;           // @newrank
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -117,12 +119,28 @@ module.exports = function(webpackEnv) {
       },
     ].filter(Boolean);
     if (preProcessor) {
-      loaders.push({
-        loader: require.resolve(preProcessor),
-        options: {
-          sourceMap: isEnvProduction && shouldUseSourceMap,
-        },
-      });
+      // @newrank before $$
+      if (preProcessor !== 'less-loader') {
+        loaders.push({
+          loader: require.resolve(preProcessor),
+          options: {
+            sourceMap: isEnvProduction && shouldUseSourceMap,
+          },
+        });
+      }
+      // @newrank before $$
+      // @newrank
+      if(preProcessor === 'less-loader') {
+        loaders.push({
+          loader: require.resolve(preProcessor),
+          options: {
+            modifyVars: process.env.ANTD_THEME ? JSON.parse(process.env.ANTD_THEME) : {},
+            javascriptEnabled: true,
+            sourceMap: isEnvProduction && shouldUseSourceMap,
+          },
+        });
+      }
+      // @newrank
     }
     return loaders;
   };
@@ -253,9 +271,35 @@ module.exports = function(webpackEnv) {
       // Automatically split vendor and commons
       // https://twitter.com/wSokra/status/969633336732905474
       // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
-      splitChunks: {
+      // splitChunks: {
+      //   chunks: 'all',
+      //   name: false,
+      // },
+      splitChunks: !isEnvProduction ? {
         chunks: 'all',
         name: false,
+      } : {
+        chunks     :'all',
+        minSize    : 30000,
+        minChunks  : 1,
+        cacheGroups: {
+            vendor: {
+                name    : 'vendor',
+                test    : /[\\/]node_modules[\\/]/,
+                chunks  : 'all',
+                priority: -10,
+                enforce : true
+            },
+            common: {// ‘src/js’ 下的js文件
+              chunks:"all",
+              test:/[\\/]src[\\/]js[\\/]/,//也可以值文件/[\\/]src[\\/]js[\\/].*\.js/,  
+              name: "common", //生成文件名，依据output规则
+              minChunks: 2,
+              maxInitialRequests: 5,
+              minSize: 0,
+              priority:1
+          }
+        }
       },
       // Keep the runtime chunk separated to enable long term caching
       // https://twitter.com/wSokra/status/969679223278505985
@@ -358,7 +402,7 @@ module.exports = function(webpackEnv) {
                   'babel-preset-react-app/webpack-overrides'
                 ),
                 // @remove-on-eject-begin
-                babelrc: false,
+                babelrc: true,        // @newrank
                 configFile: false,
                 presets: [require.resolve('babel-preset-react-app')],
                 // Make sure we have a unique cache identifier, erring on the
@@ -467,6 +511,27 @@ module.exports = function(webpackEnv) {
                 getLocalIdent: getCSSModuleLocalIdent,
               }),
             },
+            // @newrank
+            {
+              test: lessRegex,
+              use: getStyleLoaders(
+                {
+                  importLoaders: 2,
+                  modules: true,
+                  sourceMap: isEnvProduction && shouldUseSourceMap,
+                  context: path.resolve(__dirname, 'context'),
+                  getLocalIdent: (context, localIdentName, localName, options) => {
+                    if(context.resource.indexOf('node_modules') !== -1) {
+                      return localName;
+                    } else {
+                      return getCSSModuleLocalIdent(context, localIdentName, localName, options);
+                    }
+                  },
+                },
+                'less-loader'
+              ),
+            },
+            // @newrank
             // Opt-in support for SASS (using .scss or .sass extensions).
             // By default we support SASS Modules with the
             // extensions .module.scss or .module.sass
@@ -523,6 +588,8 @@ module.exports = function(webpackEnv) {
       ],
     },
     plugins: [
+      // @newrank-begin
+      ...require('./nr-plugins')(isEnvProduction),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(
         Object.assign(

@@ -97,6 +97,10 @@ module.exports = function(
   appPackage.scripts = {
     start: 'react-scripts start',
     build: 'react-scripts build',
+    // @newrank-begin
+    analyzer: "set analyzer=true&&react-scripts build",
+    dll: "react-scripts dll",
+    // @newrank-end
     test: 'react-scripts test',
     eject: 'react-scripts eject',
   };
@@ -105,6 +109,25 @@ module.exports = function(
   appPackage.eslintConfig = {
     extends: 'react-app',
   };
+
+  // @newrank-begin
+  // Setup the prettier config
+  appPackage.husky = {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  };
+  appPackage["lint-staged"] = {
+    "*.{js,jsx,json}": [
+      "prettier -no-semi --single-quote --trailing-comma es5 --print-width 100 --write",
+      "git add"
+    ],
+    "*.{css,less}": [
+      "prettier --parser css --write",
+      "git add"
+    ]
+  }
+  // @newrank-end
 
   // Setup the browsers list
   appPackage.browserslist = defaultBrowsers;
@@ -184,7 +207,7 @@ module.exports = function(
   // Install react and react-dom for backward compatibility with old CRA cli
   // which doesn't install react and react-dom along with react-scripts
   // or template is presetend (via --internal-testing-template)
-  if (!isReactInstalled(appPackage) || template) {
+  // @newrank before $$if (!isReactInstalled(appPackage) || template) {
     console.log(`Installing react and react-dom using ${command}...`);
     console.log();
 
@@ -193,7 +216,7 @@ module.exports = function(
       console.error(`\`${command} ${args.join(' ')}\` failed`);
       return;
     }
-  }
+  // @newrank before $$}
 
   if (useTypeScript) {
     verifyTypeScriptSetup();
